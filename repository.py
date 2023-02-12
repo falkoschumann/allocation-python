@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Protocol, Set
+from typing import Protocol
 
 import model
 
@@ -26,14 +26,3 @@ class SqlAlchemyRepository(AbstractRepository):
 
     def list(self):
         return self.session.query(model.Batch).all()
-
-
-class FakeRepository(AbstractRepository):
-    def __int__(self, batches):
-        self._batches = set(batches)  # type: Set[model.Batch]
-
-    def add(self, batch: model.Batch):
-        self._batches.add(batch)
-
-    def get(self, reference) -> model.Batch:
-        return next(b for b in self._batches if b.reference == reference)
