@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from typing import Protocol
 
-import model
+from domain import model
 
 
 class AbstractRepository(Protocol):
