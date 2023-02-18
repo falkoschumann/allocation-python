@@ -4,25 +4,22 @@ from typing import Protocol
 from allocation.domain import model
 
 
-class AbstractRepository(Protocol):
+class AbstractProductRepository(Protocol):
     @abstractmethod
-    def add(self, batch: model.Batch):
+    def add(self, batch: model.Product):
         raise NotImplementedError
 
     @abstractmethod
-    def get(self, reference) -> model.Batch:
+    def get(self, sku) -> model.Product:
         raise NotImplementedError
 
 
-class SqlAlchemyRepository(AbstractRepository):
+class SqlAlchemyRepository(AbstractProductRepository):
     def __init__(self, session):
         self.session = session
 
-    def add(self, batch):
-        self.session.add(batch)
+    def add(self, product):
+        self.session.add(product)
 
-    def get(self, reference):
-        return self.session.query(model.Batch).filter_by(reference=reference).one()
-
-    def list(self):
-        return self.session.query(model.Batch).all()
+    def get(self, sku):
+        return self.session.query(model.Product).filter_by(sku=sku).first()

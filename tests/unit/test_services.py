@@ -1,3 +1,5 @@
+from typing import Set
+
 import pytest
 
 from allocation.adapters import repository
@@ -5,23 +7,20 @@ from allocation.domain import model
 from allocation.service_layer import services, unit_of_work
 
 
-class FakeRepository(repository.AbstractRepository):
-    def __init__(self, batches):
-        self._batches = set(batches)  # type: Set[model.Batch]
+class FakeRepository(repository.AbstractProductRepository):
+    def __init__(self, products):
+        self._products = set(products)  # type: Set[model.Product]
 
-    def add(self, batch: model.Batch):
-        self._batches.add(batch)
+    def add(self, product: model.Product):
+        self._products.add(product)
 
-    def get(self, reference) -> model.Batch:
-        return next(b for b in self._batches if b.reference == reference)
-
-    def list(self):
-        return list(self._batches)
+    def get(self, sku) -> model.Product:
+        return next((p for p in self._products if p.sku == sku), None)
 
 
 class FakeUnitOfWork(unit_of_work.AbstractUnitOfWork):
     def __init__(self):
-        self.batches = FakeRepository([])
+        self.products = FakeRepository([])
         self.committed = False
 
     def commit(self):
@@ -34,7 +33,7 @@ class FakeUnitOfWork(unit_of_work.AbstractUnitOfWork):
 def test_add_batch():
     uow = FakeUnitOfWork()
     services.add_batch("b1", "CRUNCHY-ARMCHAIR", 100, None, uow)
-    assert uow.batches.get("b1") is not None
+    assert uow.products.get("CRUNCHY-ARMCHAIR") is not None
     assert uow.committed
 
 

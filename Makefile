@@ -11,7 +11,7 @@ up:
 	docker-compose up -d app
 
 down:
-	docker-compose down
+	docker-compose down -v
 
 logs:
 	docker-compose logs app | tail -100
