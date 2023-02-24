@@ -11,10 +11,19 @@ up:
 	docker-compose up -d app
 
 down:
-	docker-compose down -v
+	docker-compose down --remove-orphans --volumes
+
+test: up
+	docker-compose run --rm --no-deps --entrypoint=pytest app /tests/unit /tests/integration /tests/e2e
+
+unit-tests:
+	docker-compose run --rm --no-deps --entrypoint=pytest app /tests/unit
+
+integration-tests: up
+	docker-compose run --rm --no-deps --entrypoint=pytest app /tests/integration
+
+e2e-tests: up
+	docker-compose run --rm --no-deps --entrypoint=pytest app /tests/e2e
 
 logs:
 	docker-compose logs app | tail -100
-
-test:
-	pytest --tb=short

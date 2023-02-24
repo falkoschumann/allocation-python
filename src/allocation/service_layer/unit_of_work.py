@@ -1,7 +1,7 @@
 import abc
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
+import sqlalchemy
+import sqlalchemy.orm
 
 from allocation import config
 from allocation.adapters import repository
@@ -34,10 +34,12 @@ class AbstractUnitOfWork(abc.ABC):
         raise NotImplementedError
 
 
-DEFAULT_SESSION_FACTORY = sessionmaker(bind=create_engine(
-    config.get_postgres_uri(),
-    isolation_level="REPEATABLE READ"
-))
+DEFAULT_SESSION_FACTORY = sqlalchemy.orm.sessionmaker(
+    bind=sqlalchemy.create_engine(
+        config.get_postgres_uri(),
+        isolation_level="REPEATABLE READ"
+    )
+)
 
 
 class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
@@ -45,7 +47,7 @@ class SqlAlchemyUnitOfWork(AbstractUnitOfWork):
         self.session_factory = session_factory
 
     def __enter__(self):
-        self.session = self.session_factory()  # type: Session
+        self.session = self.session_factory()  # type: sqlalchemy.orm.Session
         self.products = repository.SqlAlchemyRepository(self.session)
         return super().__enter__()
 

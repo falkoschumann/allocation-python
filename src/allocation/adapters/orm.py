@@ -1,60 +1,59 @@
-from sqlalchemy import Table, Column, Integer, String, Date, ForeignKey, event
-from sqlalchemy.orm import registry, relationship
+import sqlalchemy.orm
+from sqlalchemy import event
+from sqlalchemy.sql import schema, sqltypes
 
 from allocation.domain import model
 
-mapper_registry = registry()
+mapper_registry = sqlalchemy.orm.registry()
 metadata = mapper_registry.metadata
 
-order_lines = Table(
+order_lines = schema.Table(
     "order_lines",
     metadata,
-    Column("id", Integer, primary_key=True, autoincrement=True),
-    Column("sku", String(255)),
-    Column("qty", Integer, nullable=False),
-    Column("orderid", String(255)),
-)
+    schema.Column("id", sqltypes.Integer, primary_key=True, autoincrement=True),
+    schema.Column("sku", sqltypes.String(255)),
+    schema.Column("qty", sqltypes.Integer, nullable=False),
+    schema.Column("orderid", sqltypes.String(255)), )
 
-products = Table(
+products = schema.Table(
     "products",
     metadata,
-    Column("sku", String(255), primary_key=True),
-    Column("version_number", Integer, nullable=False, server_default="0")
+    schema.Column("sku", sqltypes.String(255), primary_key=True),
+    schema.Column(
+        "version_number", sqltypes.Integer, nullable=False, server_default="0"
+    )
 )
 
-batches = Table(
+batches = schema.Table(
     "batches",
     metadata,
-    Column("id", Integer, primary_key=True, autoincrement=True),
-    Column("reference", String(255)),
-    Column("sku", ForeignKey("products.sku")),
-    Column("_purchased_quantity", Integer, nullable=False),
-    Column("eta", Date, nullable=True),
-)
+    schema.Column("id", sqltypes.Integer, primary_key=True, autoincrement=True),
+    schema.Column("reference", sqltypes.String(255)),
+    schema.Column("sku", schema.ForeignKey("products.sku")),
+    schema.Column("_purchased_quantity", sqltypes.Integer, nullable=False),
+    schema.Column("eta", sqltypes.Date, nullable=True), )
 
-allocations = Table(
+allocations = schema.Table(
     "allocations",
     metadata,
-    Column("id", Integer, primary_key=True, autoincrement=True),
-    Column("orderline_id", ForeignKey("order_lines.id")),
-    Column("batch_id", ForeignKey("batches.id")),
-)
+    schema.Column("id", sqltypes.Integer, primary_key=True, autoincrement=True),
+    schema.Column("orderline_id", schema.ForeignKey("order_lines.id")),
+    schema.Column("batch_id", schema.ForeignKey("batches.id")), )
 
 
 def start_mappers():
-    lines_mapper = mapper_registry.map_imperatively(model.OrderLine, order_lines)
-    batches_mapper = mapper_registry.map_imperatively(
-        model.Batch,
-        batches,
-        properties={
-            "_allocations": relationship(lines_mapper, secondary=allocations, collection_class=set)
-        },
+    lines_mapper = mapper_registry.map_imperatively(
+        model.OrderLine, order_lines
     )
+    batches_mapper = mapper_registry.map_imperatively(
+        model.Batch, batches, properties={
+            "_allocations": sqlalchemy.orm.relationship(
+                lines_mapper, secondary=allocations, collection_class=set
+            )
+        }, )
     mapper_registry.map_imperatively(
-        model.Product,
-        products,
-        properties={
-            "batches": relationship(batches_mapper)
+        model.Product, products, properties={
+            "batches": sqlalchemy.orm.relationship(batches_mapper)
         }
     )
 
