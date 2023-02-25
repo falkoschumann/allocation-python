@@ -1,11 +1,15 @@
 import pathlib
+import shutil
+import subprocess
 import time
 
 import pytest
+import redis
 import requests
 import sqlalchemy
 import sqlalchemy.exc
 import sqlalchemy.orm
+import tenacity
 
 from allocation import config
 from allocation.adapters.orm import metadata, start_mappers
@@ -30,25 +34,20 @@ def session(session_factory):
     return session_factory()
 
 
+@tenacity.retry(stop=tenacity.stop_after_delay(10))
 def wait_for_postgres_to_come_up(engine):
-    deadline = time.time() + 10
-    while time.time() < deadline:
-        try:
-            return engine.connect()
-        except sqlalchemy.exc.OperationalError:
-            time.sleep(0.5)
-    pytest.fail("Postgres never came up")
+    return engine.connect()
 
 
+@tenacity.retry(stop=tenacity.stop_after_delay(10))
 def wait_for_webapp_to_come_up():
-    deadline = time.time() + 10
-    url = config.get_api_url()
-    while time.time() < deadline:
-        try:
-            return requests.get(url)
-        except requests.ConnectionError:
-            time.sleep(0.5)
-    pytest.fail("API never came up")
+    return requests.get(config.get_api_url())
+
+
+@tenacity.retry(stop=tenacity.stop_after_delay(10))
+def wait_for_redis_to_come_up():
+    r = redis.Redis(**config.get_redis_host_and_port())
+    return r.ping()
 
 
 @pytest.fixture(scope="session")
@@ -78,3 +77,15 @@ def restart_api():
     ).parent / "../src/allocation/entrypoints/flask_app.py").touch()
     time.sleep(0.5)
     wait_for_webapp_to_come_up()
+
+
+@pytest.fixture
+def restart_redis_pubsub():
+    wait_for_redis_to_come_up()
+    if not shutil.which("docker-compose"):
+        print("skipping restart, assumes running in container")
+        return
+    subprocess.run(
+        ["docker-compose", "restart", "-t", "0", "redis_pubsub"],
+        check=True,
+    )
