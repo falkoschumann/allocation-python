@@ -23,15 +23,15 @@ def in_memory_db():
 
 
 @pytest.fixture
-def session_factory(in_memory_db):
+def sqlite_session_factory(in_memory_db):
     start_mappers()
     yield sqlalchemy.orm.sessionmaker(bind=in_memory_db)
     sqlalchemy.orm.clear_mappers()
 
 
 @pytest.fixture
-def session(session_factory):
-    return session_factory()
+def sqlite_session(sqlite_session_factory):
+    return sqlite_session_factory()
 
 
 @tenacity.retry(stop=tenacity.stop_after_delay(10))

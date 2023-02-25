@@ -10,18 +10,15 @@ Message = Union[commands.Command, events.Event]
 
 
 def handle(message: Message, uow: unit_of_work.AbstractUnitOfWork):
-    results = []
     queue = [message]
     while queue:
         message = queue.pop(0)
         if isinstance(message, events.Event):
             handle_event(message, queue, uow)
         elif isinstance(message, commands.Command):
-            cmd_results = handle_command(message, queue, uow)
-            results.append(cmd_results)
+            handle_command(message, queue, uow)
         else:
             raise Exception(f'{message} was not an Event or Command')
-    return results
 
 
 def handle_event(
@@ -54,7 +51,14 @@ def handle_command(
 
 
 EVENT_HANDLERS = {
-    events.Allocated: [handlers.publish_allocated_event],
+    events.Allocated: [
+        handlers.publish_allocated_event,
+        handlers.add_allocation_to_read_model,
+    ],
+    events.Deallocated: [
+        handlers.remove_allocation_to_read_model,
+        handlers.reallocate,
+    ],
     events.OutOfStock: [handlers.send_out_of_stock_notification],
 }  # type: Dict[Type[events.Event], List[Callable]]
 

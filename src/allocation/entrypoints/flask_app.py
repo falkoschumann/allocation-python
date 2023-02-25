@@ -3,6 +3,7 @@ from datetime import datetime
 import flask.app
 import flask.globals
 
+from allocation import views
 from allocation.adapters import orm
 from allocation.domain import commands
 from allocation.service_layer import handlers, messagebus, unit_of_work
@@ -36,9 +37,17 @@ def allocate_endpoint():
             request.json["sku"],
             request.json["qty"],
         )
-        results = messagebus.handle(event, unit_of_work.SqlAlchemyUnitOfWork())
-        batchref = results.pop(0)
+        messagebus.handle(event, unit_of_work.SqlAlchemyUnitOfWork())
     except handlers.InvalidSku as e:
         return {"message": str(e)}, 400
 
-    return {"batchref": batchref}, 201
+    return "OK", 202
+
+
+@app.route("/allocations/<orderid>", methods=['GET'])
+def allocations_view_endpoint(orderid):
+    uow = unit_of_work.SqlAlchemyUnitOfWork()
+    result = views.allocations(orderid, uow)
+    if not result:
+        return 'not found', 404
+    return flask.jsonify(result), 200

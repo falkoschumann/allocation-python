@@ -40,6 +40,14 @@ allocations = schema.Table(
     schema.Column("orderline_id", schema.ForeignKey("order_lines.id")),
     schema.Column("batch_id", schema.ForeignKey("batches.id")), )
 
+allocations_view = schema.Table(
+    "allocations_view",
+    metadata,
+    schema.Column("orderid", sqltypes.String(255)),
+    schema.Column("sku", sqltypes.String(255)),
+    schema.Column("batchref", sqltypes.String(255)),
+)
+
 
 def start_mappers():
     lines_mapper = mapper_registry.map_imperatively(
