@@ -21,9 +21,7 @@ def test_happy_path_returns_202_and_batch_is_allocated():
 
     response = api_client.get_allocation(orderid)
     assert response.ok
-    assert response.json() == [
-        {'sku': sku, 'batchref': earlybatch}
-    ]
+    assert response.json() == [{"sku": sku, "batchref": earlybatch}]
 
 
 @pytest.mark.usefixtures("postgres_db")

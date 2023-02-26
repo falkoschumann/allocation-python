@@ -4,7 +4,9 @@ psycopg2-binary
 redis
 sqlalchemy
 
-# tests
+# dev/tests
+black
+pylint
 pytest
 pytest-icdiff
 requests

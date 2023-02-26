@@ -2,7 +2,7 @@ import dataclasses
 from datetime import date
 from typing import List, Optional, Set
 
-from allocation.domain import commands, events
+from allocation.domain import events
 
 
 @dataclasses.dataclass(unsafe_hash=True)
@@ -13,9 +13,7 @@ class OrderLine:
 
 
 class Batch:
-    def __init__(
-        self, ref: str, sku: str, qty: int, eta: Optional[date]
-    ):
+    def __init__(self, ref: str, sku: str, qty: int, eta: Optional[date]):
         self.reference = ref
         self.sku = sku
         self.eta = eta
@@ -68,9 +66,7 @@ class Product:
 
     def allocate(self, line: OrderLine) -> str | None:
         try:
-            batch = next(
-                b for b in sorted(self.batches) if b.can_allocate(line)
-            )
+            batch = next(b for b in sorted(self.batches) if b.can_allocate(line))
             batch.allocate(line)
             self.version_number += 1
             self.events.append(
@@ -78,7 +74,7 @@ class Product:
                     orderid=line.orderid,
                     sku=line.sku,
                     qty=line.qty,
-                    batchref=batch.reference
+                    batchref=batch.reference,
                 )
             )
             return batch.reference
@@ -91,6 +87,4 @@ class Product:
         batch._purchased_quantity = qty
         while batch.available_quantity < 0:
             line = batch.deallocate_one()
-            self.events.append(
-                commands.Allocate(line.orderid, line.sku, line.qty)
-            )
+            self.events.append(events.Deallocated(line.orderid, line.sku, line.qty))

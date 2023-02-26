@@ -18,7 +18,6 @@ class AbstractUnitOfWork(abc.ABC):
 
     def commit(self):
         self._commit()
-        self.collect_new_events()
 
     def collect_new_events(self):
         for product in self.products.seen:
@@ -36,8 +35,7 @@ class AbstractUnitOfWork(abc.ABC):
 
 DEFAULT_SESSION_FACTORY = sqlalchemy.orm.sessionmaker(
     bind=sqlalchemy.create_engine(
-        config.get_postgres_uri(),
-        isolation_level="REPEATABLE READ"
+        config.get_postgres_uri(), isolation_level="REPEATABLE READ"
     )
 )
 

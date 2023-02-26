@@ -10,83 +10,85 @@ from allocation.domain import model
 from allocation.service_layer import unit_of_work
 from ..random_refs import random_batchref, random_orderid, random_sku
 
+pytestmark = pytest.mark.usefixtures("mappers")
+
 
 def insert_batch(session, ref, sku, qty, eta, product_version=1):
     session.execute(
         sqlalchemy.text(
-            '''
+            """
             INSERT INTO products (sku, version_number)
             VALUES (:sku, :version)
-            '''
+            """
         ),
-        dict(sku=sku, version=product_version)
+        dict(sku=sku, version=product_version),
     )
     session.execute(
         sqlalchemy.text(
-            '''
+            """
             INSERT INTO batches (reference, sku, _purchased_quantity, eta)
             VALUES (:ref, :sku, :qty, :eta)
-            '''
+            """
         ),
-        dict(ref=ref, sku=sku, qty=qty, eta=eta)
+        dict(ref=ref, sku=sku, qty=qty, eta=eta),
     )
 
 
 def get_allocated_batch_ref(session, orderid, sku):
     [[orderlineid]] = session.execute(
         sqlalchemy.text(
-            '''
+            """
             SELECT id
               FROM order_lines
              WHERE orderid=:orderid
                AND sku=:sku
-            '''
+            """
         ),
-        dict(orderid=orderid, sku=sku)
+        dict(orderid=orderid, sku=sku),
     )
     [[batchref]] = session.execute(
         sqlalchemy.text(
-            '''
+            """
             SELECT b.reference
               FROM allocations
               JOIN batches AS b ON batch_id = b.id
              WHERE orderline_id=:orderlineid
-            '''
+            """
         ),
-        dict(orderlineid=orderlineid)
+        dict(orderlineid=orderlineid),
     )
     return batchref
 
 
 def test_uow_retrieve_a_batch_and_allocate_to_it(sqlite_session_factory):
     session = sqlite_session_factory()
-    insert_batch(session, 'batch1', 'HIPSTER-WORKBENCH', 100, None)
+    insert_batch(session, "batch1", "HIPSTER-WORKBENCH", 100, None)
     session.commit()
 
     uow = unit_of_work.SqlAlchemyUnitOfWork(sqlite_session_factory)
     with uow:
-        product = uow.products.get(sku='HIPSTER-WORKBENCH')
-        line = model.OrderLine('o1', 'HIPSTER-WORKBENCH', 10)
+        product = uow.products.get(sku="HIPSTER-WORKBENCH")
+        line = model.OrderLine("o1", "HIPSTER-WORKBENCH", 10)
         product.allocate(line)
         uow.commit()
 
-    batchref = get_allocated_batch_ref(session, 'o1', 'HIPSTER-WORKBENCH')
-    assert batchref == 'batch1'
+    batchref = get_allocated_batch_ref(session, "o1", "HIPSTER-WORKBENCH")
+    assert batchref == "batch1"
 
 
 def test_rolls_back_uncommitted_work_by_default(sqlite_session_factory):
     uow = unit_of_work.SqlAlchemyUnitOfWork(sqlite_session_factory)
     with uow:
-        insert_batch(uow.session, 'batch1', 'MEDIUM-PLINTH', 100, None)
+        insert_batch(uow.session, "batch1", "MEDIUM-PLINTH", 100, None)
 
     new_session = sqlite_session_factory()
     rows = list(
         new_session.execute(
             sqlalchemy.text(
-                '''
+                """
                 SELECT *
                   FROM batches
-                '''
+                """
             )
         )
     )
@@ -100,17 +102,17 @@ def test_rolls_back_on_error(sqlite_session_factory):
     uow = unit_of_work.SqlAlchemyUnitOfWork(sqlite_session_factory)
     with pytest.raises(MyException):
         with uow:
-            insert_batch(uow.session, 'batch1', 'LARGE-FORK', 100, None)
+            insert_batch(uow.session, "batch1", "LARGE-FORK", 100, None)
             raise MyException()
 
     new_session = sqlite_session_factory()
     rows = list(
         new_session.execute(
             sqlalchemy.text(
-                '''
+                """
                 SELECT *
                   FROM batches
-                '''
+                """
             )
         )
     )
@@ -130,9 +132,7 @@ def try_to_allocate(orderid, sku, exceptions):
         exceptions.append(e)
 
 
-def test_concurrent_updates_to_version_are_not_allowed(
-    postgres_session_factory
-):
+def test_concurrent_updates_to_version_are_not_allowed(postgres_session_factory):
     sku, batch = random_sku(), random_batchref()
     session = postgres_session_factory()
     insert_batch(session, batch, sku, 100, eta=None, product_version=1)
@@ -151,34 +151,32 @@ def test_concurrent_updates_to_version_are_not_allowed(
 
     [[version]] = session.execute(
         sqlalchemy.text(
-            '''
+            """
             SELECT version_number
               FROM products
              WHERE sku=:sku
-            '''
+            """
         ),
-        dict(sku=sku)
+        dict(sku=sku),
     )
     assert version == 2
     [exception] = exceptions
-    assert 'could not serialize access due to concurrent update' in str(
-        exception
-    )
+    assert "could not serialize access due to concurrent update" in str(exception)
 
     orders = list(
         session.execute(
             sqlalchemy.text(
-                '''
+                """
                 SELECT orderid
                   FROM allocations
                   JOIN batches ON allocations.batch_id = batches.id
                   JOIN order_lines ON allocations.orderline_id = order_lines.id
                  WHERE order_lines.sku=:sku
-                '''
+                """
             ),
-            dict(sku=sku)
+            dict(sku=sku),
         )
     )
     assert len(orders) == 1
     with unit_of_work.SqlAlchemyUnitOfWork() as uow:
-        uow.session.execute(sqlalchemy.text('''SELECT 1'''))
+        uow.session.execute(sqlalchemy.text("""SELECT 1"""))

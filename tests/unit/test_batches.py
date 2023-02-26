@@ -5,7 +5,7 @@ from allocation.domain import model
 
 def test_allocation_to_a_batch_reduces_the_available_quantity():
     batch = model.Batch("batch-001", "SMALL-TABLE", qty=20, eta=date.today())
-    line = model.OrderLine('order-ref', "SMALL-TABLE", 2)
+    line = model.OrderLine("order-ref", "SMALL-TABLE", 2)
 
     batch.allocate(line)
 
@@ -15,7 +15,7 @@ def test_allocation_to_a_batch_reduces_the_available_quantity():
 def make_batch_and_line(sku, batch_qty, line_qty):
     return (
         model.Batch("batch-001", sku, batch_qty, eta=date.today()),
-        model.OrderLine("order-123", sku, line_qty)
+        model.OrderLine("order-123", sku, line_qty),
     )
 
 

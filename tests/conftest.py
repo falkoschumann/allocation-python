@@ -14,6 +14,8 @@ import tenacity
 from allocation import config
 from allocation.adapters.orm import metadata, start_mappers
 
+pytest.register_assert_rewrite("tests.e2e.api_client")
+
 
 @pytest.fixture
 def in_memory_db():
@@ -24,14 +26,14 @@ def in_memory_db():
 
 @pytest.fixture
 def sqlite_session_factory(in_memory_db):
-    start_mappers()
     yield sqlalchemy.orm.sessionmaker(bind=in_memory_db)
-    sqlalchemy.orm.clear_mappers()
 
 
 @pytest.fixture
-def sqlite_session(sqlite_session_factory):
-    return sqlite_session_factory()
+def mappers():
+    start_mappers()
+    yield
+    sqlalchemy.orm.clear_mappers()
 
 
 @tenacity.retry(stop=tenacity.stop_after_delay(10))
@@ -60,9 +62,7 @@ def postgres_db():
 
 @pytest.fixture
 def postgres_session_factory(postgres_db):
-    start_mappers()
     yield sqlalchemy.orm.sessionmaker(bind=postgres_db)
-    sqlalchemy.orm.clear_mappers()
 
 
 @pytest.fixture
@@ -72,9 +72,9 @@ def postgres_session(postgres_db):
 
 @pytest.fixture()
 def restart_api():
-    (pathlib.Path(
-        __file__
-    ).parent / "../src/allocation/entrypoints/flask_app.py").touch()
+    (
+        pathlib.Path(__file__).parent / "../src/allocation/entrypoints/flask_app.py"
+    ).touch()
     time.sleep(0.5)
     wait_for_webapp_to_come_up()
 
