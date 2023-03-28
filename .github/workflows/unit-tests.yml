@@ -22,4 +22,4 @@ jobs:
         pip install -e src
     - name: Run unit tests
       run: |
-        pytest api tests/unit
+        pytest tests/unit
