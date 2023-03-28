@@ -1,0 +1,22 @@
+name: Unit Tests
+
+on: [push]
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 5
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.11'
+    - name: Install dependencies
+      run: |
+        pip install -r /tmp/requirements.txt
+    - name: Run unit tests
+      run: |
+        pytest api /tests/unit
